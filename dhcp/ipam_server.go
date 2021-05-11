@@ -18,7 +18,8 @@ func StartServer(configFile, port string) {
 		port = defaultPort
 	}
 	http.HandleFunc("/init", Init)
-	http.HandleFunc("/ip", IpAllocater)
+	http.HandleFunc("/ip/add", IpAllocater)
+	http.HandleFunc("/ip/free", IpDeLocater)
 	err := http.ListenAndServe(fmt.Sprintf(":%v",port), nil)
 	if err != nil {
 		log.Fatalf("unable to start the server %v", err)
@@ -50,6 +51,22 @@ func IpAllocater(w http.ResponseWriter, req *http.Request) {
 	successResponse("ip allocated", ip, w)
 }
 
+func IpDeLocater(w http.ResponseWriter, req *http.Request) {
+
+	inputDhcpInterface := req.URL.Query().Get("dhcp")
+	address := req.URL.Query().Get("addreess")
+
+	if inputDhcpInterface == "" {
+		errorResponse( fmt.Errorf("dhcp interface name can only have one value"), w)
+	}
+	if address == "" {
+		errorResponse( fmt.Errorf("ip address cannot be empty"), w)
+	}
+	availableIps := deAllocateIp(inputDhcpInterface,address)
+	successResponse("available ips", availableIps, w)
+}
+
+
 func allocateIp(inputDhcpInterface string) (string, error){
 	dhcp := dhcps[inputDhcpInterface]
 	numberOfAvailableIps := len(dhcp.AvailableIps)
@@ -62,6 +79,24 @@ func allocateIp(inputDhcpInterface string) (string, error){
 	dhcps[inputDhcpInterface] = dhcp
 	return allocatedIp, nil
 }
+
+
+func deAllocateIp(inputDhcpInterface string, ipAddress string) ([]string){
+	dhcp := dhcps[inputDhcpInterface]
+	if dhcp.AvailableIps == nil {
+		dhcp.AvailableIps = make([]string,0)
+	}
+	dhcp.AvailableIps = append(dhcp.AvailableIps, ipAddress)
+	allocatedIps := make([]string,0)
+	for _, ip := range dhcp.AllocatedIps {
+		if ip != ipAddress {
+			allocatedIps = append(allocatedIps, ip)
+		}
+	}
+	dhcp.AllocatedIps = allocatedIps
+	return dhcp.AvailableIps
+}
+
 
 func errorResponse( err error, w http.ResponseWriter) {
 	e := response( HttpResponse{
