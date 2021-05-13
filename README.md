@@ -24,7 +24,12 @@ It will load the configuration
 
 Then to get the ip run
 
-`http://localhost:8080/ip?dhcp=<dhcp_interface>`
+`http://localhost:8080/ip/add?dhcp=<dhcp_interface>`
+
+
+Then to free the ip 
+
+`http://localhost:8080/ip/remove?dhcp=<dhcp_interface>addreess=<ipAddress>`
 
 eg:
 
